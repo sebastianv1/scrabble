@@ -37,14 +37,13 @@ def main():
         board.addWordToBoard(word, loc)
         player.removeTiles(word)
         player_score += score
-        printGameDetails(player_score, opponent_score, player)
-
+        printGameDetails(board, player_score, opponent_score, player)
     elif turn == '1':
         word, loc, horizontal = queryOpponentInput()
         move_score = board.addWordToBoard(word, loc, horizontal)
         opponent_score += move_score
         player_turn = True
-        printGameDetails(player_score, opponent_score, player)
+        printGameDetails(board, player_score, opponent_score, player)
 
     while True:
         if player_turn is True:
@@ -60,12 +59,12 @@ def main():
             player.removeTiles(word)
            
             player_turn = False
-        	printGameDetails(player_score, opponent_score, player)
+            printGameDetails(board, player_score, opponent_score, player)
         else:
             word, loc, horizontal = queryOpponentInput()
             move_score = board.addWordToBoard(word, loc, horizontal)
             opponent_score += move_score
             player_turn = True
-        	printGameDetails(player_score, opponent_score, player)
+            printGameDetails(board, player_score, opponent_score, player)
 
 main()

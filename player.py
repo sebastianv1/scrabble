@@ -20,7 +20,7 @@ class Player:
         dict_file = open("dictionary.txt", "r")
         lines = dict_file.readlines()
         for line in lines:
-            self.dictionary.add(line.rstrip('\n').upper())
+            self.dictionary.add(line.rstrip('\n').rstrip('\r').upper())
 
     def initializeConstraintsWithBoard(self, board):
         self.board = board  # Update board with new one
@@ -197,13 +197,11 @@ class Player:
                 constraint = self.constraints[x][y]
                 if constraint.tile is None:
                     for h in constraint.h_domain:
-                        print h
-                        print "(" + str(x) + "," + str(y) + ")"
                         points = self.board.addWordToBoard(h, (x, y), True, True)
                         if points >= optimal_move[0]:
                             optimal_move = (points, h, (x, y), True)
                     for v in constraint.v_domain:
-                        points = self.board.addWordToBoard(h, (x, y), False, True)
+                        points = self.board.addWordToBoard(v, (x, y), False, True)
                         if points >= optimal_move[0]:
                             optimal_move = (points, v, (x, y), False)
         print "OPTIMAL MOVE:"
@@ -220,7 +218,7 @@ class Player:
                     self.constraints[x][y] = constraint
 
     def getOptimalStartMove(self):
-        optimal_move = (0, None, None, None)
+        optimal_move = (0, None, None)
         word_dict = {'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1, 'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10 }
         for d in self.domain:
             if d in self.dictionary:
