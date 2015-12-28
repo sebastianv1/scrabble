@@ -14,5 +14,6 @@ class Constraint:
             self.v_domain.remove(val)
     def __repr__(self):
         string = "(" + str(self.x) + "," + str(self.y) + ")\n"
-        string += "H_Domain: " + str(self.h_domain)
+        string += "H_Domain: " + str(self.h_domain) + "\n"
+        string += "V_Domain: " + str(self.v_domain)
         return string

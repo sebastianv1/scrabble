@@ -58,8 +58,9 @@ class Player:
             total += [''.join(p) for p in permutations(self.tiles, i) ]
         self.domain = list(set(total))
 
-    def getPointsForWord(self, word, blank_tile_letter=None):
+    def getPointsForWord(self, word, loc, horizontal=True):
         word_dict = {'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1, 'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10 }
+        x, y = loc
         total_points = 0
         for char in word:
             if char == blank_tile_letter:
@@ -68,33 +69,15 @@ class Player:
         return total_points
 
     # Constraints
-    def _getVerticalWord(self, loc, char):
-        x, y = loc
-        lowerHalf = []
-        upperHalf = []
-        upper_y = y + 1
-        lower_y = y - 1
-        while upper_y < self.board.height and self.board.getTile(x, upper_y) is not None:
-            upperHalf.append(self.board.getTile(x, upper_y))
-            upper_y += 1
-        while lower_y >= 0 and self.board.getTile(x, lower_y) is not None:
-            lowerHalf.insert(0, self.board.getTile(x, lower_y))
-            lower_y -= 1
-        return ''.join(lowerHalf + [char] + upperHalf) 
-
-    def _getPredecessingString(self, loc):
-        x, y = loc
-        previous_x = x - 1
-        previousStrArr = []
-        while previous_x >= 0 and self.board.getTile(previous_x, y) is not None: 
-            previousStrArr.insert(0, self.board.getTile(previous_x, y))
-            previous_x -= 1
-        return ''.join(previousStrArr)
-
-    def _runRules(self, constraint):
+    # 1. Lay out word horizontally
+    #   1a. Check if length fits
+    # 2. Check if laid out word connects with another word
+    #   2a. Check if word connects and can be placed
+    # 3. Check if liad out word in dict AND constrained words in dict
+    #   3a. Check if all pass
+    def _updateHorizontalConstraint(self, constraint):
         # Horizontal
         x, y = constraint.x, constraint.y
-        # Horizontal
         domain_copy = constraint.h_domain[:]
         for d in domain_copy:
             # 1. Lay out word horizontally
@@ -104,11 +87,10 @@ class Player:
             # 3. Check if liad out word in dict AND constrained words in dict
             #   3a. Check if all pass
             board_x = x
-            horizontal_word = self._getPredecessingString((x, y))
+            horizontal_word = self.board.getPredecessingString((x, y))
             valid_placement = False if horizontal_word == "" else True
             word_constraints = []
             char_i = 0
-            #print "Domain:" + str(d)
             while char_i < len(d) or (board_x < self.board.width and self.board.getTile(board_x, y) is not None):
                 # Length check
                 if board_x >= self.board.width:
@@ -128,12 +110,9 @@ class Player:
                     char_i += 1
 
                 # Check for vertical constraints
-                lower_y = y - 1
-                higher_y = y + 1
-                if (lower_y >= 0 and self.board.getTile(board_x, lower_y) is not None) or (higher_y < self.board.height and self.board.getTile(board_x, higher_y) is not None):
-                    valid_placement = True      # Makes d a valid placement       
-                    v_constraint = self._getVerticalWord((board_x, y), char)             
-                    #print "V Constraint:" + str(v_constraint)
+                v_constraint = self.board.getVerticalWord((board_x, y), char)[0] 
+                if v_constraint is not None:
+                    valid_placement = True      # Makes d a valid placement 
                     word_constraints += [v_constraint]
 
                 # Increment board_x at end of loop
@@ -152,10 +131,71 @@ class Player:
                 continue    
             for v_constraint in word_constraints:
                 if v_constraint.upper() not in self.dictionary:
-                    #print "Not valid constraint: " + str(v_constraint.upper())
                     constraint.removeValueFromDomain(d)
                     break
-        return constraint            
+
+        return constraint 
+
+    def _updateVerticalConstraint(self, constraint):
+        # Vertical
+        x, y = constraint.x, constraint.y
+        domain_copy = constraint.v_domain[:]
+        for d in domain_copy:
+            board_y = y
+            vertical_word = self.board.getPredecessingString((x, y), False)
+            valid_placement = False if vertical_word == "" else True
+            word_constraints = []
+            char_i = 0
+            #print "Domain:" + str(d)
+            while char_i < len(d) or (board_y < self.board.height and self.board.getTile(x, board_y) is not None):
+                # Length check
+                if board_y >= self.board.height:
+                    break
+                
+                # Check following vertical board locations
+                board_tile_y = self.board.getTile(x, board_y)
+                if board_tile_y is not None:
+                    valid_placement = True  # Makes d valid with connecting horizontally
+                    vertical_word += board_tile_y
+                    board_y += 1
+                    continue
+                    
+                char = d[char_i]
+                if board_tile_y is None:
+                    vertical_word += char
+                    char_i += 1
+
+                # Check for horizontal constraints
+                lower_x = x - 1
+                higher_x = x + 1
+                h_constraint = self.board.getHorizontalWord((x, board_y), char)[0]
+                if h_constraint is not None:
+                    valid_placement = True      # Makes d a valid placement  
+                    word_constraints += [h_constraint]
+
+                # Increment board_y at end of loop
+                board_y += 1
+
+            if not valid_placement:
+                constraint.removeValueFromDomain(d, False)
+                continue
+        
+            # Check if word in dict AND constrained words in dict
+            if vertical_word.upper() not in self.dictionary:
+                constraint.removeValueFromDomain(d, False)
+                continue    
+            for v_constraint in word_constraints:
+                if v_constraint.upper() not in self.dictionary:
+                    constraint.removeValueFromDomain(d, False)
+                    break
+        return constraint 
+        
+
+    def _runRules(self, constraint):
+        # Horizontal
+        constraint = self._updateHorizontalConstraint(constraint)
+        constraint = self._updateVerticalConstraint(constraint)    
+        return constraint
             
     def enforceConstraints(self):
         for x in xrange(self.board.width):
