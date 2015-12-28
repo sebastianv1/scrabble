@@ -17,17 +17,17 @@ class Player:
             self.constraints.append(list())
     
     def _generateDictionarySet(self):
-        dict_file = open("words.txt", "r")
+        dict_file = open("dictionary.txt", "r")
         lines = dict_file.readlines()
         for line in lines:
-            self.dictionary.add(line.rstrip('\n'))
+            self.dictionary.add(line.rstrip('\n').upper())
 
-    def initializeConstraintsWithBoard(self, board, domain):
+    def initializeConstraintsWithBoard(self, board):
         self.board = board  # Update board with new one
         for x in range(self.board.width):
             self.constraints[x] = list()
             for y in range(self.board.height):
-                constraint = c.Constraint(x, y, domain, self.board.board[x][y].tile)
+                constraint = c.Constraint(x, y, self.domain, self.board.board[x][y].tile)
                 self.constraints[x].append(constraint)
 
     def inputNewTiles(self):
@@ -36,7 +36,7 @@ class Player:
         while True:
             tile = raw_input("Letter:")
             if tile == "":
-                if len(temp_tiles) + len(self.tiles) != 3:
+                if len(temp_tiles) + len(self.tiles) != 7:
                     print "incorrect # of tiles. Please re-enter. Your current tiles are " + str(self.tiles)
                     temp_tiles = []
                 else:
@@ -48,9 +48,9 @@ class Player:
     def addTiles(self, tile_list):
         self.tiles += tile_list
 
-    def removeTiles(self, tiles_list):
-        for tile in tiles_list:
-            self.tiles.remove(tile)
+    def removeTiles(self, word):
+        for char in word:
+            self.tiles.remove(char)
 
     def generateAllPermutations(self):
         total = []
@@ -58,15 +58,6 @@ class Player:
             total += [''.join(p) for p in permutations(self.tiles, i) ]
         self.domain = list(set(total))
 
-    def getPointsForWord(self, word, loc, horizontal=True):
-        word_dict = {'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1, 'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10 }
-        x, y = loc
-        total_points = 0
-        for char in word:
-            if char == blank_tile_letter:
-                continue
-            total_points += word_dict[char]
-        return total_points
 
     # Constraints
     # 1. Lay out word horizontally
@@ -94,6 +85,7 @@ class Player:
             while char_i < len(d) or (board_x < self.board.width and self.board.getTile(board_x, y) is not None):
                 # Length check
                 if board_x >= self.board.width:
+                    valid_placement = False
                     break
                 
                 # Check following horizontal board locations
@@ -150,6 +142,7 @@ class Player:
             while char_i < len(d) or (board_y < self.board.height and self.board.getTile(x, board_y) is not None):
                 # Length check
                 if board_y >= self.board.height:
+                    valid_placement = False
                     break
                 
                 # Check following vertical board locations
@@ -196,6 +189,26 @@ class Player:
         constraint = self._updateHorizontalConstraint(constraint)
         constraint = self._updateVerticalConstraint(constraint)    
         return constraint
+
+    def getOptimalMove(self):
+        optimal_move = (0, None, None, None)
+        for x in xrange(self.board.width):
+            for y in xrange(self.board.height):
+                constraint = self.constraints[x][y]
+                if constraint.tile is None:
+                    for h in constraint.h_domain:
+                        print h
+                        print "(" + str(x) + "," + str(y) + ")"
+                        points = self.board.addWordToBoard(h, (x, y), True, True)
+                        if points >= optimal_move[0]:
+                            optimal_move = (points, h, (x, y), True)
+                    for v in constraint.v_domain:
+                        points = self.board.addWordToBoard(h, (x, y), False, True)
+                        if points >= optimal_move[0]:
+                            optimal_move = (points, v, (x, y), False)
+        print "OPTIMAL MOVE:"
+        print optimal_move
+        return optimal_move
             
     def enforceConstraints(self):
         for x in xrange(self.board.width):
@@ -205,3 +218,18 @@ class Player:
                     constraint = self._runRules(constraint)
                     print(constraint)
                     self.constraints[x][y] = constraint
+
+    def getOptimalStartMove(self):
+        optimal_move = (0, None, None, None)
+        word_dict = {'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1, 'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10 }
+        for d in self.domain:
+            if d in self.dictionary:
+                points = self.board.addWordToBoard(d, (7, 7), True, True)
+                if points >= optimal_move[0]:
+                    optimal_move = (points, d, (7, 7))
+        print "OPTIMAL MOVE:"
+        print optimal_move
+        return optimal_move
+
+
+

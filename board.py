@@ -162,6 +162,7 @@ class Board:
         if horizontal:
             # Calculate laid out word
             while char_i < len(word) or (x < self.width and self.getTile(x, y) is not None):
+                print "(" + str(x) + "," + str(y) + ")"
                 if self.getTile(x, y) is not None:
                     total_points += word_dict[self.getTile(x, y)]
                     x += 1
