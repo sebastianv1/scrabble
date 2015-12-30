@@ -36,7 +36,7 @@ class Player:
         while True:
             tile = raw_input("Letter:")
             if tile == "":
-                if len(temp_tiles) + len(self.tiles) != 7:
+                if len(temp_tiles) + len(self.tiles) > 7:
                     print "incorrect # of tiles. Please re-enter. Your current tiles are " + str(self.tiles)
                     temp_tiles = []
                 else:
